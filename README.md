@@ -3,129 +3,159 @@
 <html lang="pt-BR">
 <head>
 <meta charset="UTF-8">
-<title>Supermercado 3D</title>
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Supermercado Simulator 3D</title>
 <style>
 body{margin:0;overflow:hidden;font-family:Arial}
-#info{position:fixed;top:10px;left:10px;background:#10251c;color:white;padding:15px;border-radius:12px;z-index:2}
-#info h2{margin:0 0 8px;color:#72ff9a}
-#start{position:fixed;inset:0;background:#13271f;color:white;display:grid;place-content:center;text-align:center;z-index:5}
-button{padding:15px;background:#45df82;border:0;border-radius:9px;font-size:18px;cursor:pointer}
+#hud{position:fixed;top:12px;left:12px;background:#10251eeb;color:white;padding:16px;border-radius:12px;z-index:2}
+#hud h2{margin:0 0 10px;color:#71ff9b}
+#msg{position:fixed;bottom:25px;left:50%;transform:translateX(-50%);background:#10251eeb;color:white;padding:15px;border-radius:10px;text-align:center;z-index:2}
+#start{position:fixed;inset:0;background:#14251f;color:white;display:grid;place-content:center;text-align:center;z-index:5}
+button{background:#42e783;padding:15px 25px;border:0;border-radius:9px;font-weight:bold;font-size:17px;cursor:pointer}
 </style>
 </head>
 <body>
-<div id="info">
-<h2>🛒 Supermercado 3D</h2>
-<div id="money">Dinheiro: R$ 100,00</div>
-<div id="msg">Pegue produtos com E</div>
-<p>WASD: andar<br>Mouse: olhar<br>E: pegar produto</p>
+<div id="hud">
+<h2>🏪 Mercado Simulator</h2>
+<div id="money">Dinheiro: R$ 200,00</div>
+<div id="cart">Carrinho: vazio</div>
+<p>WASD — andar<br>Mouse — olhar<br>E — pegar produto<br>F — pagar</p>
 </div>
+<div id="msg">Bem-vindo ao supermercado!</div>
 <div id="start">
-<h1>🏪 Supermercado 3D</h1>
-<p>Explore o mercado e compre produtos!</p>
-<button onclick="startGame()">ENTRAR NO MERCADO</button>
+<h1>🛒 Mercado Simulator 3D</h1>
+<p>Faça suas compras neste supermercado!</p>
+<button onclick="begin()">JOGAR</button>
 </div>
 <script type="module">
 import * as THREE from
 'https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js';
 
 const scene=new THREE.Scene();
-scene.background=new THREE.Color(0xb8c8ce);
+scene.background=new THREE.Color(0xaabfc5);
+scene.fog=new THREE.Fog(0xaabfc5,25,55);
 
 const camera=new THREE.PerspectiveCamera(75,innerWidth/innerHeight,.1,100);
-camera.position.set(0,1.7,8);
+camera.position.set(0,1.7,12);
 
 const renderer=new THREE.WebGLRenderer({antialias:true});
 renderer.setSize(innerWidth,innerHeight);
+renderer.setPixelRatio(Math.min(devicePixelRatio,2));
 renderer.shadowMap.enabled=true;
 document.body.appendChild(renderer.domElement);
 
-scene.add(new THREE.HemisphereLight(0xffffff,0x666666,2));
-const light=new THREE.DirectionalLight(0xffffff,3);
-light.position.set(5,10,5);
-light.castShadow=true;
-scene.add(light);
+scene.add(new THREE.HemisphereLight(0xffffff,0x777777,2));
+const sun=new THREE.DirectionalLight(0xffffff,2.5);
+sun.position.set(-5,12,8);
+sun.castShadow=true;
+scene.add(sun);
 
-function box(w,h,d,color,x,y,z){
- const obj=new THREE.Mesh(
+function bloco(w,h,d,color,x,y,z){
+ const m=new THREE.Mesh(
   new THREE.BoxGeometry(w,h,d),
   new THREE.MeshStandardMaterial({color,roughness:.65})
  );
- obj.position.set(x,y,z);
- obj.castShadow=true;
- obj.receiveShadow=true;
- scene.add(obj);
- return obj;
+ m.position.set(x,y,z);
+ m.castShadow=true;
+ m.receiveShadow=true;
+ scene.add(m);
+ return m;
 }
 
-// Piso e paredes
-box(30,.2,30,0xbcbcb5,0,-.1,0);
-box(30,5,.3,0xe7e7e0,0,2.5,-15);
-box(.3,5,30,0xe7e7e0,-15,2.5,0);
-box(.3,5,30,0xe7e7e0,15,2.5,0);
+// Estrutura do mercado
+bloco(32,.3,34,0xc6c6bd,0,-.2,0);
+bloco(32,7,.3,0xe8e8e0,0,3.5,-17);
+bloco(.3,7,34,0xe8e8e0,-16,3.5,0);
+bloco(.3,7,34,0xe8e8e0,16,3.5,0);
 
-// Luzes do teto
-for(let x=-10;x<=10;x+=5){
- const l=new THREE.PointLight(0xfff0d0,35,12);
- l.position.set(x,4,0);
- scene.add(l);
- box(3,.1,1,0xffffff,x,4.7,0);
+// Iluminação
+for(let x=-12;x<=12;x+=6){
+ const luz=new THREE.PointLight(0xfff0d5,55,15);
+ luz.position.set(x,5,0);
+ scene.add(luz);
+ bloco(3,.12,1,0xffffff,x,6.5,0);
 }
 
-// Prateleiras
-for(let z of [-8,-2,4]){
- for(let x of [-6,0,6]){
-  box(3,2.5,.7,0x777d80,x,1.25,z);
-  for(let y of [.5,1.2,1.9])
-   box(3.1,.08,.9,0xb9a48b,x,y,z+.1);
+// Prateleiras com vários produtos
+const produtos=[];
+const catalogo=[
+ {nome:'Leite',preco:6,cor:0xf6f0db},
+ {nome:'Cereal',preco:13,cor:0xf2b934},
+ {nome:'Suco',preco:8,cor:0xdf382e},
+ {nome:'Biscoito',preco:5,cor:0x3986d5},
+ {nome:'Arroz',preco:9,cor:0xf5f3e8},
+ {nome:'Chocolate',preco:6,cor:0x603921},
+ {nome:'Refrigerante',preco:7,cor:0xc52d32},
+ {nome:'Sabão',preco:10,cor:0x37a9d4}
+];
+
+for(let z of [-10,-3,4]){
+ for(let x of [-7,0,7]){
+  bloco(3,2.8,.7,0x687579,x,1.4,z);
+  for(let y of [.5,1.3,2.1]){
+   bloco(3.1,.1,.85,0xc7b59d,x,y,z+.15);
+   for(let i=0;i<5;i++){
+    const item=catalogo[(i+Math.round(x)+Math.round(z)+20+
+      Math.round(y*10))%catalogo.length];
+    const cor=catalogo[Math.abs((i+Math.round(x)+
+      Math.round(z)+Math.round(y*10)))%catalogo.length].cor;
+    const p=bloco(.36,.42,.35,cor,
+      x-1.1+i*.55,y+.25,z+.25);
+    p.userData={nome:item.nome,preco:item.preco,pego:false};
+    produtos.push(p);
+   }
+  }
  }
 }
 
-// Produtos
-const products=[];
-const names=['Leite','Cereal','Suco','Biscoito','Arroz','Café',
-             'Refrigerante','Chocolate','Maçã','Pão'];
-const colors=[0xf4f0df,0xe6b93d,0xe83b32,0x3979d2,
-              0xf5f5f5,0x593b29,0x42a6d8,0x713e26,
-              0xe7352b,0xc98d43];
-const prices=[5,12,7,4,8,15,6,5,3,6];
+// Caixa de pagamento
+bloco(4,1.1,1.5,0x286b46,10,.55,-12);
+bloco(3.8,.12,1.6,0xf2f2ed,10,1.15,-12);
+bloco(1,.18,.8,0x252525,9.4,1.3,-12.2);
+bloco(2,.6,.15,0x168449,10,2,-12.8);
 
-for(let i=0;i<60;i++){
- const row=Math.floor(i/20);
- const col=i%20;
- const side=Math.floor(col/10);
- const x=(side===0?-6:6)-1.1+(col%10)*.24;
- const z=[-8,-2,4][row]+.55;
- const h=.35+(i%3)*.1;
- const p=box(.22,h,.25,colors[i%10],x,.35+(i%3)*.65,z);
- p.userData={
-  name:names[i%10],
-  price:prices[i%10],
-  taken:false
- };
- products.push(p);
+// Carrinho visível à frente do jogador
+const carrinho=new THREE.Group();
+scene.add(carrinho);
+const metal=new THREE.MeshStandardMaterial({color:0xaebbc0,metalness:.8,roughness:.3});
+function barra(a,b,r=.025){
+ const dir=new THREE.Vector3().subVectors(b,a);
+ const m=new THREE.Mesh(new THREE.CylinderGeometry(r,r,dir.length(),8),metal);
+ m.position.copy(a).add(b).multiplyScalar(.5);
+ m.quaternion.setFromUnitVectors(new THREE.Vector3(0,1,0),dir.normalize());
+ carrinho.add(m);
+}
+for(let x of [-.4,.4]){
+ barra(new THREE.Vector3(x,.25,0),new THREE.Vector3(x,.8,-1));
+ barra(new THREE.Vector3(x,.8,-1),new THREE.Vector3(x,1,-1.4));
+}
+for(let y of [.3,.45,.6,.75]){
+ barra(new THREE.Vector3(-.4,y,-.1),new THREE.Vector3(.4,y,-.1),.015);
+ barra(new THREE.Vector3(-.4,y,-1),new THREE.Vector3(.4,y,-1),.015);
+ for(let x of [-.4,.4])
+  barra(new THREE.Vector3(x,y,-.1),new THREE.Vector3(x,y,-1),.015);
 }
 
-// Caixa
-box(3,1,1.5,0x28734a,9,.5,-11);
-box(1,.2,.7,0x333333,9,1.1,-11);
-box(3,.15,.3,0xeeeeee,9,1.1,-11.8);
+let dinheiro=200;
+let cesta=[];
+let yaw=0,pitch=0;
+let jogando=false,travado=false;
+const teclas={};
+const mensagem=document.getElementById('msg');
 
-let money=100,total=0;
-const keys={};
-let yaw=0,pitch=0,playing=false,locked=false;
-
-function startGame(){
+function begin(){
+ jogando=true;
  document.getElementById('start').style.display='none';
- playing=true;
  renderer.domElement.requestPointerLock();
 }
-
 document.addEventListener('pointerlockchange',()=>{
- locked=document.pointerLockElement===renderer.domElement;
+ travado=document.pointerLockElement===renderer.domElement;
 });
-
+renderer.domElement.addEventListener('click',()=>{
+ if(jogando&&!travado)renderer.domElement.requestPointerLock();
+});
 document.addEventListener('mousemove',e=>{
- if(!locked)return;
+ if(!travado)return;
  yaw-=e.movementX*.002;
  pitch-=e.movementY*.002;
  pitch=Math.max(-1.2,Math.min(1.2,pitch));
@@ -133,75 +163,72 @@ document.addEventListener('mousemove',e=>{
  camera.rotation.y=yaw;
  camera.rotation.x=pitch;
 });
-
 document.addEventListener('keydown',e=>{
- keys[e.code]=true;
- if(e.code==='KeyE')takeProduct();
+ teclas[e.code]=true;
+ if(e.code==='KeyE')pegar();
+ if(e.code==='KeyF')pagar();
 });
-document.addEventListener('keyup',e=>keys[e.code]=false);
+document.addEventListener('keyup',e=>teclas[e.code]=false);
 
-function takeProduct(){
- const ray=new THREE.Raycaster();
- ray.setFromCamera(new THREE.Vector2(0,0),camera);
- const hits=ray.intersectObjects(products);
- const msg=document.getElementById('msg');
-
- if(!hits.length||hits[0].distance>3){
-  msg.textContent='Chegue perto e mire em um produto!';
+function pegar(){
+ const raio=new THREE.Raycaster();
+ raio.setFromCamera(new THREE.Vector2(0,0),camera);
+ const acertos=raio.intersectObjects(produtos);
+ if(!acertos.length||acertos[0].distance>3){
+  mensagem.textContent='Mire em um produto e chegue mais perto!';
   return;
  }
-
- const p=hits[0].object;
- if(p.userData.taken)return;
-
- const data=p.userData;
- if(money<data.price){
-  msg.textContent='Dinheiro insuficiente!';
+ const p=acertos[0].object;
+ if(p.userData.pego)return;
+ if(dinheiro<p.userData.preco){
+  mensagem.textContent='Dinheiro insuficiente!';
   return;
  }
-
- data.taken=true;
- money-=data.price;
- total+=data.price;
+ p.userData.pego=true;
+ cesta.push(p.userData);
  p.visible=false;
-
+ mensagem.textContent='Você pegou: '+p.userData.nome;
+ document.getElementById('cart').textContent=
+  'Carrinho: '+cesta.length+' produtos';
+}
+function pagar(){
+ if(camera.position.distanceTo(new THREE.Vector3(10,1.7,-10))>4){
+  mensagem.textContent='Vá até o caixa para pagar!';
+  return;
+ }
+ if(!cesta.length){
+  mensagem.textContent='Seu carrinho está vazio!';
+  return;
+ }
+ let total=cesta.reduce((s,p)=>s+p.preco,0);
+ dinheiro-=total;
  document.getElementById('money').textContent=
-  'Dinheiro: R$ '+money.toFixed(2).replace('.',',');
-
- msg.textContent='Comprou '+data.name+
-  ' por R$ '+data.price.toFixed(2).replace('.',',');
+  'Dinheiro: R$ '+dinheiro.toFixed(2).replace('.',',');
+ mensagem.textContent='Compra paga! Total: R$ '+
+  total.toFixed(2).replace('.',',');
+ cesta=[];
+ document.getElementById('cart').textContent='Carrinho: vazio';
 }
 
-function animate(){
- requestAnimationFrame(animate);
-
- if(playing){
-  const speed=.09;
-  if(keys.KeyW) {
-   camera.position.x-=Math.sin(yaw)*speed;
-   camera.position.z-=Math.cos(yaw)*speed;
-  }
-  if(keys.KeyS) {
-   camera.position.x+=Math.sin(yaw)*speed;
-   camera.position.z+=Math.cos(yaw)*speed;
-  }
-  if(keys.KeyA) {
-   camera.position.x-=Math.cos(yaw)*speed;
-   camera.position.z+=Math.sin(yaw)*speed;
-  }
-  if(keys.KeyD) {
-   camera.position.x+=Math.cos(yaw)*speed;
-   camera.position.z-=Math.sin(yaw)*speed;
-  }
-  camera.position.x=Math.max(-14,Math.min(14,camera.position.x));
-  camera.position.z=Math.max(-14,Math.min(14,camera.position.z));
+function animar(){
+ requestAnimationFrame(animar);
+ if(jogando){
+  let velocidade=.085;
+  if(teclas.KeyW){camera.position.x-=Math.sin(yaw)*velocidade;camera.position.z-=Math.cos(yaw)*velocidade}
+  if(teclas.KeyS){camera.position.x+=Math.sin(yaw)*velocidade;camera.position.z+=Math.cos(yaw)*velocidade}
+  if(teclas.KeyA){camera.position.x-=Math.cos(yaw)*velocidade;camera.position.z+=Math.sin(yaw)*velocidade}
+  if(teclas.KeyD){camera.position.x+=Math.cos(yaw)*velocidade;camera.position.z-=Math.sin(yaw)*velocidade}
+  camera.position.x=THREE.MathUtils.clamp(camera.position.x,-14,14);
+  camera.position.z=THREE.MathUtils.clamp(camera.position.z,-15,15);
   camera.position.y=1.7;
+  const offset=new THREE.Vector3(0,-1.25,-1.2);
+  offset.applyAxisAngle(new THREE.Vector3(0,1,0),yaw);
+  carrinho.position.copy(camera.position).add(offset);
+  carrinho.rotation.y=yaw;
  }
  renderer.render(scene,camera);
 }
-
-animate();
-
+animar();
 addEventListener('resize',()=>{
  camera.aspect=innerWidth/innerHeight;
  camera.updateProjectionMatrix();
@@ -210,4 +237,3 @@ addEventListener('resize',()=>{
 </script>
 </body>
 </html>
-
